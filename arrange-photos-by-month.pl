@@ -1,59 +1,70 @@
 #!/usr/bin/env perl
 
 use 5.010.001;
+use Function::Parameters;
+use JSON -convert_blessed_universally;
+use Image::ExifTool qw(:Public);
 
-my @src = qw (folder-all folder-part);
-
-my @files = `find $src`;
-chomp @files;
+my $debug = 1;
 
 =pod
- -rwxrwxr-x 1 aliang 100 385490 201908 sample.jpg
+ fun testImageExifTool ( $file ) {
+     my $info = ImageInfo( $file );
+     say $info;
+     say to_json($info, { pretty => 1 } );
+     
+ }
 =cut
 
 sub main
 {
+    my @src   = qw (folder-all folder-part);
+    my @files = `find @src -type f`;
+    chomp @files;
+
     for my $file (@files) {
-        my $dst = &getYearMonth($file);
+        say $file if $debug;
+
+        # testImageExifTool( $file );
+        my $dst = &getTargetDirectory($file);
         &copyToFolder( $file, $dst );
     }
 }
 
-sub getTargetDirectory
+fun getTargetDirectory ( $file )
 {
-    my $file = shift;
-
     my ( $year, $month ) = &getYearMonth($file);
-
     return "$year-$month";
 }
 
+# TODO get year, month with exiftool
 # get modify date by ls -l, set $year, $month
 # for .jpg .JPG .JEPG .jepg .heic .mov .MOV, get $year, $month by exiftool
-sub getYearMonth
+fun getYearMonth ( $file )
 {
+    my $result = `ls -l --time-style=+%Y-%m $file`;
+    my @fields = split /\s+/, $result;
+    my $time   = $fields[5];
+    return split /-/, $time;
 }
 
 # if target_dir/$file exists and differ from $file
 # do not move, keep $file where it is.
 # else, move file to target_dir
-sub copyToFolder
+fun copyToFolder ( $file, $dst )
 {
-    my $file = shift;
-    my $dst  = shift;
+    system("mkdir $dst") unless -e $dst;
 
     if ( -e "$dst/$file" and isDiff( $file, "$dst/$file" ) ) {
         return;
+    } else {
+        system("cp $file $dst");
     }
-
-    system("mv $file $dst");
 }
 
-sub isDiff
+fun isDiff ( $first, $second )
 {
-    my $first  = shift;
-    my $second = shift;
-    return `diff $first $second`;
+    return `diff -q $first $second`;
 }
 
 &main();
