@@ -42,10 +42,24 @@ fun getTargetDirectory ( $file )
 # for .jpg .JPG .JEPG .jepg .heic .mov .MOV, get $year, $month by exiftool
 fun getYearMonth ( $file )
 {
-    my $result = `ls -l --time-style=+%Y-%m $file`;
-    my @fields = split /\s+/, $result;
-    my $time   = $fields[5];
-    return split /-/, $time;
+    # my $result = `ls -l --time-style=+%Y-%m $file`;
+    # my @fields = split /\s+/, $result;
+    # my $time   = $fields[5];
+    # return split /-/, $time;
+
+    my $re_pic = qr/\.(jpg|jpeg|png|heic)$/i;
+    my $re_mov = qr/\.(mov)$/i;
+    if ( $file =~ /$re_pic/ ) {
+        my $result = `exiftool $file  | grep "Date/Time Original"`;
+        say $result and exit;
+        my @fields = split /:/, $result, 4;
+        say "@fields" and exit;
+    } elsif ( $file =~ /$re_mov/ ) {
+        my $result = `exiftool IMG_0828.MOV  | grep  'Create Date'`;
+        say "mov file";
+    } else {
+        say "file format not support : $file ";
+    }
 }
 
 # if target_dir/$file exists and differ from $file
