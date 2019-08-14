@@ -2,19 +2,25 @@
 
 use 5.010.001;
 use Function::Parameters;
+use Types::Standard qw(Str Int ArrayRef RegexpRef);
 use JSON -convert_blessed_universally;
 use Image::ExifTool qw(:Public);
+use File::Basename;
+use File::Spec;
+use File::Path qw(make_path remove_tree);
+use Carp qw(croak carp);
 
-my $debug = 1;
+my $config;    # configs read from json file.
 
 sub main
 {
-    my @src   = qw (folder-all folder-part);
+    $config = &readConfigFile( "config.json");
+    my @src   = @{ $config->{'folder'} };
     my @files = `find @src -type f`;
     chomp @files;
 
     for my $file (@files) {
-        say $file if $debug;
+        say $file if $config->{'debug'};
         my $dst = &getTargetDirectory($file);
         &copyToFolder( $file, $dst );
     }
@@ -23,7 +29,8 @@ sub main
 fun getTargetDirectory ( $file )
 {
     my ( $year, $month ) = &getYearMonth($file);
-    return "$year-$month";
+    my $path = $config->{'target'} ? $config->{'target'} : ".";
+    return File::Spec->catdir( $path, $year . $config->{'delimiter'} . $month );
 }
 
 # get year, month by reading exif
@@ -52,7 +59,7 @@ fun getYearMonth ( $file )
     } else {
     }
     my @fields = split /:/, $time;
-    say "@fields[0,1]" if $debug;
+    say "@fields[0,1]" if $config->{'debug'};
     return @fields[ 0, 1 ];
 }
 
@@ -65,13 +72,47 @@ fun copyToFolder ( $file, $dst )
     if ( -e "$dst/$file" and isDiff( $file, "$dst/$file" ) ) {
         return;
     } else {
-        system("cp $file $dst");
+        my $cmd = $config->{'command'};
+        system("$cmd $file $dst");
     }
 }
 
 fun isDiff ( $first, $second )
 {
     return `diff -q $first $second`;
+}
+
+fun getDirnameFilename (Str $file, Str $path=".")
+{
+    my $dir      = dirname $file;
+    my $filename = basename $file;
+    $dir = File::Spec->catdir( $path, $dir ) if ($path);
+    my $fullname = File::Spec->catfile( $dir, $filename );
+    return ( $dir, $filename, $fullname );
+}
+
+fun openFile (Str $file, Str :$path=".", Str :$mode = '<')
+{
+    my ( $dir, $filename, $fullname ) = getDirnameFilename( $file, $path );
+
+    make_path( $dir, { mode => 0777 } ) if $dir;
+    open my $fh, $mode, $fullname or croak "cannot access $fullname\n";
+    return $fh;
+}
+
+fun getFileContent (Str $file, Str :$path=".")
+{
+    my $fh  = openFile( $file, path => $path ) or croak "$file $!";
+    my @tmp = <$fh>;
+    close($fh);
+    return @tmp;
+}
+
+fun readConfigFile( $filename )
+{
+    my @data        = &getFileContent($filename);
+    my $onelinedata = join "\n", @data;
+    return from_json($onelinedata);
 }
 
 &main();
