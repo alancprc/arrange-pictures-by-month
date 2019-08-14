@@ -2,7 +2,8 @@
     "debug" : 0,
     "folder" : [
         "folder-all",
-        "folder-part"
+        "folder-part",
+        "target-folder"
     ],
     "target"  : "target-folder",
     "delimiter" : "-",
