@@ -7,15 +7,6 @@ use Image::ExifTool qw(:Public);
 
 my $debug = 1;
 
-=pod
- fun testImageExifTool ( $file ) {
-     my $info = ImageInfo( $file );
-     say $info;
-     say to_json($info, { pretty => 1 } );
-     
- }
-=cut
-
 sub main
 {
     my @src   = qw (folder-all folder-part);
@@ -24,8 +15,6 @@ sub main
 
     for my $file (@files) {
         say $file if $debug;
-
-        # testImageExifTool( $file );
         my $dst = &getTargetDirectory($file);
         &copyToFolder( $file, $dst );
     }
@@ -40,36 +29,33 @@ fun getTargetDirectory ( $file )
 # TODO get year, month with exiftool
 # get modify date by ls -l, set $year, $month
 # for .jpg .JPG .JEPG .jepg .heic .mov .MOV, get $year, $month by exiftool
-fun getYearMonthByFileModificationTime ( $file )
-{
-    my $result = `ls -l --time-style=+%Y-%m $file`;
-    my @fields = split /\s+/, $result;
-    my $time   = $fields[5];
-    return split /-/, $time;
-}
+
+=pod
+ FileModifyDate                   : 2019:08:13 09:21:48+08:00
+
+ MIMEType                         : image/jpeg
+ DateTimeOriginal                 : 2019:08:13 09:21:50
+
+ MIMEType                         : video/quicktime
+ CreateDate                       : 2018:10:29 13:02:01
+=cut
 
 fun getYearMonth ( $file )
 {
-    my $re_pic = qr/\.(jpg|jpeg|png|heic)$/i;
-    my $re_mov = qr/\.(mov)$/i;
-    if ( $file =~ /$re_pic/ ) {
-        my $match = 'Date/Time Original';
-        my $result = `exiftool $file | grep '$match' `;
-        return getYearMonthByFileModificationTime($file) unless $result;
+    my $exifTool = new Image::ExifTool;
+    $exifTool->Options( Unknown => 1 );
+    my $info = $exifTool->ImageInfo($file);
 
-        my @fields = split /\s*:\s*/, $result, 4;
-        return @fields[1,2];
-    } elsif ( $file =~ /$re_mov/ ) {
-        my $match = 'Create Date';
-        my $result = `exiftool $file | grep '$match' `;
-        return getYearMonthByFileModificationTime($file) unless $result;
-
-        my @fields = split /\s*:\s*/, $result, 4;
-        say @fields[1,2];
-        return @fields[1,2];
+    my $time = $info->{'FileModifyDate'};
+    if ( $info->{'MIMEType'} =~ /image/i and $info->{'DateTimeOriginal'} ) {
+        $time = $info->{'DateTimeOriginal'};
+    } elsif ( $info->{'MIMEType'} =~ /video/i and $info->{'CreateDate'} ) {
+        $time = $info->{'CreateDate'};
     } else {
-        say "file format not support : $file ";
     }
+    my @fields = split /:/, $time;
+    say "@fields[0,1]" if $debug;
+    return @fields[ 0, 1 ];
 }
 
 # if target_dir/$file exists and differ from $file
