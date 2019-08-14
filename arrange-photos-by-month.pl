@@ -26,9 +26,9 @@ fun getTargetDirectory ( $file )
     return "$year-$month";
 }
 
-# TODO get year, month with exiftool
-# get modify date by ls -l, set $year, $month
-# for .jpg .JPG .JEPG .jepg .heic .mov .MOV, get $year, $month by exiftool
+# get year, month by reading exif
+fun getYearMonth ( $file )
+{
 
 =pod
  FileModifyDate                   : 2019:08:13 09:21:48+08:00
@@ -40,8 +40,6 @@ fun getTargetDirectory ( $file )
  CreateDate                       : 2018:10:29 13:02:01
 =cut
 
-fun getYearMonth ( $file )
-{
     my $exifTool = new Image::ExifTool;
     $exifTool->Options( Unknown => 1 );
     my $info = $exifTool->ImageInfo($file);
@@ -58,9 +56,8 @@ fun getYearMonth ( $file )
     return @fields[ 0, 1 ];
 }
 
-# if target_dir/$file exists and differ from $file
-# do not move, keep $file where it is.
-# else, move file to target_dir
+# copy file to target directory $dst.
+# if $dst/$file exists and differ from $file, do nothing.
 fun copyToFolder ( $file, $dst )
 {
     system("mkdir $dst") unless -e $dst;
