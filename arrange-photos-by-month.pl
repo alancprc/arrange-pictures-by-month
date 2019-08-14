@@ -14,7 +14,7 @@ my $config;    # configs read from json file.
 
 sub main
 {
-    $config = &readConfigFile( "config.json");
+    $config = &readConfigFile("config.json");
     my @src   = @{ $config->{'folder'} };
     my @files = `find @src -type f`;
     chomp @files;
@@ -67,14 +67,19 @@ fun getYearMonth ( $file )
 # if $dst/$file exists and differ from $file, do nothing.
 fun copyToFolder ( $file, $dst )
 {
-    system("mkdir $dst") unless -e $dst;
+    system("mkdir -p $dst") unless -e $dst;
 
-    if ( -e "$dst/$file" and isDiff( $file, "$dst/$file" ) ) {
+    my $fn = basename $file;
+    if ( -e "$dst/$fn" and "$dst/$fn" eq $file ) {
+        say "'$dst/$fn' and '$file' are the same file";
         return;
-    } else {
-        my $cmd = $config->{'command'};
-        system("$cmd $file $dst");
     }
+    if ( -e "$dst/$fn" and isDiff( $file, "$dst/$fn" ) ) {
+        say "'$dst/$fn' exists and differ from '$file'";
+        return;
+    }
+    my $cmd = $config->{'command'};
+    system("$cmd $file $dst");
 }
 
 fun isDiff ( $first, $second )
@@ -108,7 +113,7 @@ fun getFileContent (Str $file, Str :$path=".")
     return @tmp;
 }
 
-fun readConfigFile( $filename )
+fun readConfigFile ( $filename )
 {
     my @data        = &getFileContent($filename);
     my $onelinedata = join "\n", @data;
