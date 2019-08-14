@@ -1,0 +1,10 @@
+{
+    "debug" : 0,
+    "folder" : [
+        "folder-all",
+        "folder-part"
+    ],
+    "target"  : "target-folder",
+    "delimiter" : "-",
+    "command" : "cp -a"
+}
