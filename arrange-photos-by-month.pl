@@ -40,23 +40,33 @@ fun getTargetDirectory ( $file )
 # TODO get year, month with exiftool
 # get modify date by ls -l, set $year, $month
 # for .jpg .JPG .JEPG .jepg .heic .mov .MOV, get $year, $month by exiftool
+fun getYearMonthByFileModificationTime ( $file )
+{
+    my $result = `ls -l --time-style=+%Y-%m $file`;
+    my @fields = split /\s+/, $result;
+    my $time   = $fields[5];
+    return split /-/, $time;
+}
+
 fun getYearMonth ( $file )
 {
-    # my $result = `ls -l --time-style=+%Y-%m $file`;
-    # my @fields = split /\s+/, $result;
-    # my $time   = $fields[5];
-    # return split /-/, $time;
-
     my $re_pic = qr/\.(jpg|jpeg|png|heic)$/i;
     my $re_mov = qr/\.(mov)$/i;
     if ( $file =~ /$re_pic/ ) {
-        my $result = `exiftool $file  | grep "Date/Time Original"`;
-        say $result and exit;
-        my @fields = split /:/, $result, 4;
-        say "@fields" and exit;
+        my $match = 'Date/Time Original';
+        my $result = `exiftool $file | grep '$match' `;
+        return getYearMonthByFileModificationTime($file) unless $result;
+
+        my @fields = split /\s*:\s*/, $result, 4;
+        return @fields[1,2];
     } elsif ( $file =~ /$re_mov/ ) {
-        my $result = `exiftool IMG_0828.MOV  | grep  'Create Date'`;
-        say "mov file";
+        my $match = 'Create Date';
+        my $result = `exiftool $file | grep '$match' `;
+        return getYearMonthByFileModificationTime($file) unless $result;
+
+        my @fields = split /\s*:\s*/, $result, 4;
+        say @fields[1,2];
+        return @fields[1,2];
     } else {
         say "file format not support : $file ";
     }
