@@ -28,13 +28,14 @@ sub main
 
 fun getTargetDirectory ( $file )
 {
-    my ( $year, $month ) = &getYearMonth($file);
-    my $path = $config->{'target'} ? $config->{'target'} : ".";
+    my ( $year, $month, $byexif ) = &getYearMonthByExif($file);
+    my $dir  = $byexif         ? "target-camera" : "target-saved";
+    my $path = $config->{$dir} ? $config->{$dir} : ".";
     return File::Spec->catdir( $path, $year . $config->{'delimiter'} . $month );
 }
 
 # get year, month by reading exif
-fun getYearMonth ( $file )
+fun getYearMonthByExif ( $file )
 {
 
 =pod
@@ -50,17 +51,20 @@ fun getYearMonth ( $file )
     my $exifTool = new Image::ExifTool;
     $exifTool->Options( Unknown => 1 );
     my $info = $exifTool->ImageInfo($file);
+    my $byexif;
 
     my $time = $info->{'FileModifyDate'};
     if ( $info->{'MIMEType'} =~ /image/i and $info->{'DateTimeOriginal'} ) {
-        $time = $info->{'DateTimeOriginal'};
-    } elsif ( $info->{'MIMEType'} =~ /video/i and $info->{'CreateDate'} ) {
-        $time = $info->{'CreateDate'};
-    } else {
+        $time   = $info->{'DateTimeOriginal'};
+        $byexif = 1;
+    }
+    if ( $info->{'MIMEType'} =~ /video/i and $info->{'CreateDate'} ) {
+        $time   = $info->{'CreateDate'};
+        $byexif = 1;
     }
     my @fields = split /:/, $time;
-    say "@fields[0,1]" if $config->{'debug'};
-    return @fields[ 0, 1 ];
+    say "year, month : @fields[0,1],\tbyexif : $byexif" if $config->{'debug'};
+    return ( @fields[ 0, 1 ], $byexif );
 }
 
 # copy file to target directory $dst.

@@ -5,7 +5,8 @@
         "folder-part",
         "target-folder"
     ],
-    "target"  : "target-folder",
+    "target-camera"  : "target-folder",
+    "target-saved" : "saved-folder",
     "delimiter" : "-",
     "command" : "cp -a"
 }
